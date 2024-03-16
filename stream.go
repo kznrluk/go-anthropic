@@ -78,7 +78,8 @@ func (c *Client) CreateMessage(ctx context.Context, reqBody MessageRequest) (*Me
 	}
 
 	url := c.baseUrl + "/messages"
-	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(reqData))
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewBuffer(reqData))
 	if err != nil {
 		return nil, fmt.Errorf("error creating request: %w", err)
 	}
@@ -87,11 +88,6 @@ func (c *Client) CreateMessage(ctx context.Context, reqBody MessageRequest) (*Me
 	req.Header.Set("anthropic-beta", "messages-2023-12-15")
 	req.Header.Set("content-type", "application/json")
 	req.Header.Set("x-api-key", c.apiKey)
-
-	req, err = http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewBuffer(reqData))
-	if err != nil {
-		return nil, fmt.Errorf("error creating request: %w", err)
-	}
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -113,6 +109,8 @@ func (c *Client) CreateMessage(ctx context.Context, reqBody MessageRequest) (*Me
 		}
 
 		return &MessageResponse, nil
+	} else if rawResp.Type == "error" {
+		return nil, fmt.Errorf("error response: %s", respStr)
 	}
 
 	return &MessageResponse{}, nil
@@ -127,7 +125,8 @@ func (c *Client) CreateMessageStream(ctx context.Context, reqBody MessageRequest
 	}
 
 	url := c.baseUrl + "/messages"
-	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(reqData))
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewBuffer(reqData))
 	if err != nil {
 		return nil, fmt.Errorf("error creating request: %w", err)
 	}
@@ -136,11 +135,6 @@ func (c *Client) CreateMessageStream(ctx context.Context, reqBody MessageRequest
 	req.Header.Set("anthropic-beta", "messages-2023-12-15")
 	req.Header.Set("content-type", "application/json")
 	req.Header.Set("x-api-key", c.apiKey)
-
-	req, err = http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewBuffer(reqData))
-	if err != nil {
-		return nil, fmt.Errorf("error creating request: %w", err)
-	}
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
