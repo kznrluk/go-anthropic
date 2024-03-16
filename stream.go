@@ -3,6 +3,7 @@ package anthropic
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,7 +12,6 @@ import (
 
 type (
 	EventType string
-	RoleType  string
 
 	MessageResponse struct {
 		// Delta is the response from the stream
@@ -23,7 +23,7 @@ type (
 
 	MessageRequest struct {
 		MaxTokens int       `json:"max_tokens"`
-		Model     ModelType `json:"model"`
+		Model     string    `json:"model"`
 		System    string    `json:"system"`
 		Messages  []Message `json:"messages"`
 
@@ -31,8 +31,8 @@ type (
 	}
 
 	Message struct {
-		Role    RoleType `json:"role"`
-		Content string   `json:"content"`
+		Role    string `json:"role"`
+		Content string `json:"content"`
 	}
 
 	RawResponse struct {
@@ -61,15 +61,15 @@ type (
 const (
 	ContentBlockType EventType = "content_block_delta"
 
-	ChatMessageRoleUser      RoleType = "user"
-	ChatMessageRoleAssistant RoleType = "assistant"
+	ChatMessageRoleUser      = "user"
+	ChatMessageRoleAssistant = "assistant"
 )
 
 var (
 	dataPrefix = []byte("data: ")
 )
 
-func (c *Client) CreateMessage(reqBody MessageRequest) (*MessageResponse, error) {
+func (c *Client) CreateMessage(ctx context.Context, reqBody MessageRequest) (*MessageResponse, error) {
 	reqBody.Stream = false
 
 	reqData, err := json.Marshal(reqBody)
@@ -87,6 +87,11 @@ func (c *Client) CreateMessage(reqBody MessageRequest) (*MessageResponse, error)
 	req.Header.Set("anthropic-beta", "messages-2023-12-15")
 	req.Header.Set("content-type", "application/json")
 	req.Header.Set("x-api-key", c.apiKey)
+
+	req, err = http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewBuffer(reqData))
+	if err != nil {
+		return nil, fmt.Errorf("error creating request: %w", err)
+	}
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -113,7 +118,7 @@ func (c *Client) CreateMessage(reqBody MessageRequest) (*MessageResponse, error)
 	return &MessageResponse{}, nil
 }
 
-func (c *Client) CreateMessageStream(reqBody MessageRequest) (*Stream, error) {
+func (c *Client) CreateMessageStream(ctx context.Context, reqBody MessageRequest) (*Stream, error) {
 	reqBody.Stream = true
 
 	reqData, err := json.Marshal(reqBody)
@@ -131,6 +136,11 @@ func (c *Client) CreateMessageStream(reqBody MessageRequest) (*Stream, error) {
 	req.Header.Set("anthropic-beta", "messages-2023-12-15")
 	req.Header.Set("content-type", "application/json")
 	req.Header.Set("x-api-key", c.apiKey)
+
+	req, err = http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewBuffer(reqData))
+	if err != nil {
+		return nil, fmt.Errorf("error creating request: %w", err)
+	}
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
